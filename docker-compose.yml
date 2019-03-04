@@ -1,0 +1,15 @@
+version: '2.3'
+
+services:
+  autossh-public-to-private:
+    container_name: autossh-public-to-private
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - SSH_PUBLIC_HOSTUSER=ubuntu
+      - SSH_PUBLIC_HOSTNAME=ec2-18-219-164-234.us-east-2.compute.amazonaws.com
+      - SSH_PRIVATE_HOSTNAME=test-machine-64
+    restart: always
+    volumes:
+      - ./extvol:/app/extvol
