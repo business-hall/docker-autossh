@@ -5,6 +5,25 @@ if test ! -e ${keyFile}; then
   exit 1
 fi
 chmod 0400 ${keyFile}
+mapping=
+hosts=
+pub2PrivFile=/app/extvol/pub2priv.txt
+if test -e ${pub2PrivFile}; then
+  for line in `cat ${pub2PrivFile}`; do
+    mapping="${mapping} -R ${line}"
+    host=`echo $line | cut -f2 -d':'`
+    if [[ ${hosts} != *"${host}"* ]]; then
+      nslookup $host
+      hosts="${host} ${hosts}"
+    fi
+  done
+fi
+priv2PubFile=/app/extvol/priv2pub.txt
+if test -e ${priv2PubFile}; then
+  for line in `cat ${priv2PubFile}`; do
+    mapping=$mapping -L $line
+  done
+fi
 cmd=$(cat <<EOF
 autossh
  -M 0
@@ -15,13 +34,10 @@ autossh
  -o ServerAliveCountMax=1
  -o ExitOnForwardFailure=yes
  -t
- -R 20022:${SSH_PRIVATE_HOSTNAME}:22
- -R 20443:${SSH_PRIVATE_HOSTNAME}:443
+ ${mapping}
  ${SSH_PUBLIC_HOSTUSER}@${SSH_PUBLIC_HOSTNAME}
 EOF
 )
-
-nslookup ${SSH_PRIVATE_HOSTNAME}
 echo Running ${cmd}
 AUTOSSH_POLL=10 \
 AUTOSSH_LOGLEVEL=0 \
