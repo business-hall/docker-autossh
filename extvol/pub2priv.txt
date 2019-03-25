@@ -1,3 +1,4 @@
 20022:test-machine-64:22
 20443:test-machine-64:443
 20080:test-machine-64:80
+25001:test-machine-64:5001

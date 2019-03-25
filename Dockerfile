@@ -1,4 +1,4 @@
-FROM debian:stretch-slim
+FROM alpine:latest
 
 ENV \
     TERM=xterm \
@@ -8,25 +8,28 @@ ENV \
     AUTOSSH_FIRST_POLL=30       \
     AUTOSSH_LOGLEVEL=1
 
-RUN apt-get update && \
-    apt-get -y dist-upgrade && \
-    apt-get -y install openssh-client build-essential wget dnsutils
+RUN apk update && \
+    apk add openssh-client bind-tools build-base bash
 
-RUN mkdir -p /app/src && \
-    wget -O /app/tini https://github.com/krallin/tini/releases/download/v0.18.0/tini-static-amd64 && \
-    wget -O /app/src/autossh-1.4g.tgz https://www.harding.motd.ca/autossh/autossh-1.4g.tgz && \
-    tar -xvf /app/src/autossh-1.4g.tgz -C /app/src && \
-    cd /app/src/autossh-1.4g && \
+COPY ./zips /app/zips
+COPY ./pre-baked /app/pre-baked
+RUN mkdir -p /app/build && \
+    if test ! -f /app/zips/autossh-1.4g.tgz; then \
+      wget -O /app/zips/autossh-1.4g.tgz https://www.harding.motd.ca/autossh/autossh-1.4g.tgz; \
+    fi  && \
+    tar -xvf /app/zips/autossh-1.4g.tgz -C /app/build && \
+    cd /app/build/autossh-1.4g && \
     ./configure && \
     make install && \
-    rm -rf /app/src/ && \
-    apt-get -y remove build-essential && \
-    apt-get -y autoremove 
+    rm -r /app/build/autossh-1.4g && \
+    apk del build-base && \
+    if test ! -f /app/pre-baked/tini-static-amd64; then \
+      wget -O /app/pre-baked/tini-static-amd64 https://github.com/krallin/tini/releases/download/v0.18.0/tini-static-amd64 && \
+    fi 
 
 VOLUME /app/extvol
-ADD entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/tini && \
-    chmod +x /app/entrypoint.sh
+ADD entrypoint.sh /app/scripts/entrypoint.sh
+RUN chmod +x /app/scripts/entrypoint.sh
 
-ENTRYPOINT ["/app/tini", "-s", "--"]
-CMD ["/bin/bash", "-c", "/app/entrypoint.sh"]
+ENTRYPOINT ["/app/pre-baked/tini-static-amd64", "-s", "--"]
+CMD ["/bin/bash", "-c", "/app/scripts/entrypoint.sh"]
